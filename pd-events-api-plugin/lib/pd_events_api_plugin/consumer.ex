@@ -9,7 +9,7 @@ defmodule PdEventsApiPlugin.Consumer do
   require Logger
 
   defmodule State do
-    defstruct [:chan, :exchange, :queue, :handler]
+    defstruct [:chan, :exchange, :queue, :handler, :routing_key]
   end
 
   @doc """
@@ -18,12 +18,16 @@ defmodule PdEventsApiPlugin.Consumer do
   * `exchange` - the exchange to use
   * `queue` - the queue to read from
   * `message_handler` - a function that accepts a message and returns `:ok`, `:retry` or `:error`
+  * `routing_key` - nil or an explicit routing key that needs to be passed on configuring the exchange binding.
 
   A 'retry' will also do a 1-second sleep to throttle the client a bit.
 
+  Note that "routing_key" has nothing to do with PagerDuty's routing key. It's just a number from 1..parallelism
+  that indicates which bucket it falls in.
+
   """
-  def start_link([exchange, queue, message_handler]) do
-    state = %State{exchange: exchange, queue: queue, handler: message_handler}
+  def start_link([exchange, queue, message_handler, routing_key]) do
+    state = %State{exchange: exchange, queue: queue, handler: message_handler, routing_key: routing_key}
     GenServer.start_link(__MODULE__, state, [])
   end
 
@@ -61,7 +65,7 @@ defmodule PdEventsApiPlugin.Consumer do
   end
 
   defp setup_queue(state) do
-    error_queue = "#{state.queue}_error"
+    error_queue = "#{state.exchange}-error"
     {:ok, _} = Queue.declare(state.chan, error_queue, durable: true)
     # Messages that cannot be delivered to any consumer in the main queue will be routed to the error queue
     {:ok, _} = Queue.declare(state.chan, state.queue,
@@ -71,8 +75,8 @@ defmodule PdEventsApiPlugin.Consumer do
                                {"x-dead-letter-routing-key", :longstr, error_queue}
                              ]
                             )
-    :ok = Exchange.fanout(state.chan, state.exchange, durable: true)
-    :ok = Queue.bind(state.chan, state.queue, state.exchange)
+    :ok = Exchange.topic(state.chan, state.exchange, durable: true)
+    :ok = Queue.bind(state.chan, state.queue, state.exchange, routing_key: state.routing_key)
   end
 
   defp consume(state, tag, redelivered, payload) do

@@ -3,8 +3,9 @@ defmodule PdEventsApiPlugin.Application do
   require Logger
 
   @default_app_file if Mix.env == :prod, do: "/etc/rabbitmq/pd-events-api-plugin.json", else: "config/pd-events-api-plugin.json"
-  @default_exchange "pd-events-api-plugin"
+  @default_exchange "pd-events-exchange"
   @default_queue    "pd-events"
+  @default_parallelism 12
 
   @doc """
   Application startup. The configuration file is hard-coded but you can override it by setting the
@@ -27,12 +28,30 @@ defmodule PdEventsApiPlugin.Application do
 
       exchange = Map.get(config, "exchange", @default_exchange)
       queue = Map.get(config, "queue", @default_queue)
+      parallelism = Map.get(config, "parallelism", @default_parallelism)
       handler = &PdEventsApiPlugin.Handler.handle_message/1
 
-      Supervisor.start_link([
-        {PdEventsApiPlugin.Consumer, [exchange, queue, handler]}],
+      # We always start one queue for blank routing key
+      first_worker = Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, ""]}, id: make_id("default"))
+      # ..and a bunch for with routing keys.
+      parallel_workers = if parallelism > 0 do
+        1..parallelism
+        |> Enum.map(fn i ->
+          queue = "#{queue}-#{i}"
+          Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, "#{i}"]}, id: make_id(i))
+        end)
+      else
+        []
+      end
+
+      Supervisor.start_link(
+        [first_worker | parallel_workers],
         strategy: :one_for_one,
         name: PdEventsApiPlugin.Supervisor)
     end
+  end
+
+  defp make_id(n) do
+    String.to_atom("PdEventsApiPlugin-Worker-#{n}")
   end
 end

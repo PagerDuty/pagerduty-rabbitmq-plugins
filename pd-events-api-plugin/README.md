@@ -25,14 +25,25 @@ with the command line tool contained in the RabbitMQ Management plugin:
 rabbitmqadmin publish routing_key='' exchange='pd-events-api-plugin' </tmp/event.json
 ```
 
-# Performance
+# Notable configuration settings
 
-By default, the queue gets processed in a linear fashion. This is to prevent messages from
-landing out-of-order. There are various ways to speed this up:
+* `log_level` - you probably want to set this to `info` because with the default level, debug
+  logging is enabled.
+* `paralellism` - by default this is disabled; if you enable it, then multiple queues will be
+  created. See below for more details. Note that RabbitMQ probably has some limitations in this
+  area as well.
 
-* Allow a larger backlog.
-* Wrap calls to `consume/4` in `Task.await/1` to run them in parallel.
-* Setup routing keys and multiple queues on the exchange.
-* Combinations of the above.
+# Parallelism
 
-By default, this code is created as "safety first", but feel free to deviate.
+By default, one queue is created, bound to the exchange with a default routing key, and you
+publish to there (with the empty `""` routing key). However, this serializes all calls to the
+PD Events API which may be too slow.
+
+Simple doing things in parallel won't work: events for individual routing keys _must_ arrive in order
+of how they were generated so triggers, acks, and resolves arrive in the correct order at PagerDuty. Not
+doing this will mean that you could acknowledge an old incident, or worse, resolve the wrong one.
+
+The `parallelism` setting offers a simple way out - you specify how many queues are created, and each
+one gets a consumer. Then, based on either manual mapping, or a hash function, you calculate the
+RabbitMQ routing key for publication. This way there is complete control over which events get processed
+in parallel (hopefully mapped so that they are fully independent) and which ones will wait for each other.
