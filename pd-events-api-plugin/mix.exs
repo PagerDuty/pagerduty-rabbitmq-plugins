@@ -11,18 +11,17 @@ defmodule PdEventsApiPlugin.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
+    extras = if Mix.env == :test, do: [:logger], else: [:logger, :rabbit, :rabbit_common]
     [
-      extra_applications: [:logger]
+      mod: [PdEventsApiPlugin.Application, {}],
+      extra_applications: extras
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:pd_rabbitmq_plugins_common, path: "../common"}
     ]
   end
 end
