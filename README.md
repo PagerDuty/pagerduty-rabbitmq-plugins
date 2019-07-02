@@ -37,7 +37,17 @@ Current list of plugins:
 
 ## Installation
 
-t.b.d.
+Assuming that you have the correct Erlang and Elixir versions installed (check [.tool-versions](.tool-versions)
+for the required versions) and after making sure that this version is compatible with your RabbitMQ version,
+you can just do:
+
+```
+make
+```
+
+to build a `dist.zip` file. This file can be unpacked in the RabbitMQ plugins directory (`/usr/lib/rabbitmq/plugins`
+on Ubuntu Bionic). Restarting RabbitMQ will make all the plugins available. `rabbitmq-plugins enable <plugin-name>`
+will then enable the plugin you want to use. Please check the plugin documentation first though for extra details.
 
 # License
 

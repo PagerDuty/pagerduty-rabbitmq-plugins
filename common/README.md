@@ -8,5 +8,5 @@ that makes sense to factor out. Second, given that we can only have a single OTP
 this means that all dependencies for the various plugins _must_ be the same version. Thus, it makes sense to
 force this by having all the plugins collect their dependencies in a single place.
 
-The small drawback is that when using a subset of the plugins, too many applications are started. Usually,
-an idle OTP app takes very little resources so it's a minor drawback and the benefits vastly outweigh it.
+The only drawback of this method is that you may have some unnecessary `.ez` files in your RabbitMQ plugins
+directory.
