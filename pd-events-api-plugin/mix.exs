@@ -12,9 +12,12 @@ defmodule PdEventsApiPlugin.MixProject do
   end
 
   def application do
-    extras = if Mix.env == :test, do: [:logger], else: [:logger, :rabbit, :rabbit_common]
+    # We only require a wait for the main RabbitMQ server app when
+    # we're running as an actual plugin, which is when we're compiled
+    # as prod.
+    extras = if Mix.env != :prod, do: [:logger], else: [:logger, :rabbit]
     [
-      mod: [PdEventsApiPlugin.Application, {}],
+      mod: {PdEventsApiPlugin.Application, []},
       extra_applications: extras
     ]
   end

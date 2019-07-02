@@ -22,7 +22,8 @@ defmodule PdRabbitmqPluginsCommon.MixProject do
       # We collect all dependencies here. That way, we do not need to replicate the
       # Makefile that creates all the `.ez` files for every application.
       {:amqp, "~> 1.2"},
-      {:httpoison, "~> 1.5"}
+      {:httpoison, "~> 1.5"},
+      {:jason, "~> 1.1"}
     ]
   end
 end

@@ -1,21 +1,20 @@
 # PdEventsApiPlugin
 
-**TODO: Add description**
+This plugin is very simple: it reads from the configured queue and publishes whatever it finds
+to
 
-## Installation
+# Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `pd_events_api_plugin` to your list of dependencies in `mix.exs`:
+TODO
 
-```elixir
-def deps do
-  [
-    {:pd_events_api_plugin, "~> 0.1.0"}
-  ]
-end
-```
+# Performance
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/pd_events_api_plugin](https://hexdocs.pm/pd_events_api_plugin).
+By default, the queue gets processed in a linear fashion. This is to prevent messages from
+landing out-of-order. There are various ways to speed this up:
 
+* Allow a larger backlog.
+* Wrap calls to `consume/4` in `Task.await/1` to run them in parallel.
+* Setup routing keys and multiple queues on the exchange.
+* Combinations of the above.
+
+By default, this code is created as "safety first", but feel free to deviate.

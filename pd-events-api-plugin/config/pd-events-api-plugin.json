@@ -1,0 +1,7 @@
+{
+  "__doc__": "This is a configuration file where you can override default values.",
+  "++doc__": "Tags below are documentation only. Remove the leading pluses for the actual keys",
+  "++log_level": "The minimum log level (default debug, can be info or error)",
+  "++exchange": "The exchange to use (default \"pd-events-api-plugin\")",
+  "++queue": "The queue to use (default \"pd-events\")"
+}
