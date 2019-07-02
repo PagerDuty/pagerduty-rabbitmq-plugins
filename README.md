@@ -49,6 +49,10 @@ to build a `dist.zip` file. This file can be unpacked in the RabbitMQ plugins di
 on Ubuntu Bionic). Restarting RabbitMQ will make all the plugins available. `rabbitmq-plugins enable <plugin-name>`
 will then enable the plugin you want to use. Please check the plugin documentation first though for extra details.
 
+Note that it is best to run this on the target platform; while compiled `.beam` files are portable, it might
+be that plugin code (indirectly) depends on applications that have native functions; in that case, the `.ez`
+file will contain platform-dependent object code.
+
 # License
 
 Copyright 2019, PagerDuty Inc.
