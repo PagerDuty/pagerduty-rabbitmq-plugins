@@ -15,6 +15,7 @@ ez-pdeaip:
 	cd pd-events-api-plugin; MIX_ENV=prod mix archive.build; zip ../dist.zip *.ez
 
 clients:
+	go get github.com/streadway/amqp
 	go build ./...
 
 clean: clean-ez
