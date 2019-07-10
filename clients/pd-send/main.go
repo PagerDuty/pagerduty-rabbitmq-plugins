@@ -4,11 +4,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
+	"hash/crc32"
 	"log"
 	"os"
-
-	"encoding/json"
+	"strconv"
 
 	"github.com/streadway/amqp"
 )
@@ -27,7 +29,7 @@ func getEnvWithDefault(env string, default_value string) string {
 	return v
 }
 
-func makeBody() []byte {
+func makeBody() (string, []byte) {
 	m := make(map[string]interface{})
 
 	// Required stuff
@@ -37,7 +39,8 @@ func makeBody() []byte {
 	var source = flag.String("source", "", "Payload source")
 	var severity = flag.String("severity", "", "Payload severity")
 
-	// TODO flags for optional stuff
+	// flags for optional stuff
+	var parallelism = flag.Int("parallelism", 0, "MUST be same as plugin parallelism setting")
 
 	// Process everything and check required things.
 	flag.Parse()
@@ -66,17 +69,24 @@ func makeBody() []byte {
 	payload["severity"] = severity
 	m["payload"] = payload
 
-	b, err := json.Marshal(m)
+	body, err := json.Marshal(m)
 	failOnError(err, "Could not encode JSON")
 
-	return b
+	amqp_routing_key := ""
+	if *parallelism > 0 {
+		hash := crc32.ChecksumIEEE([]byte(*routing_key))
+		partition := (int(hash) % *parallelism) + 1
+		amqp_routing_key = strconv.Itoa(partition)
+	}
+	fmt.Println("Amqp routing key", amqp_routing_key)
+	return amqp_routing_key, body
 }
 
 func main() {
 	url := getEnvWithDefault("PD_SEND_AMQP_URL", "amqp://guest:guest@localhost:5672")
 	exchange := getEnvWithDefault("PD_SEND_EXCHANGE", "pd-events-exchange")
 
-	body := makeBody()
+	routing_key, body := makeBody()
 
 	conn, err := amqp.Dial(url)
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -87,13 +97,13 @@ func main() {
 	defer ch.Close()
 
 	err = ch.Publish(
-		exchange, // exchange
-		"",       // routing key
-		true,     // mandatory
-		false,    // immediate
+		exchange,
+		routing_key,
+		true,  // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(body),
+			Body:        body,
 		})
 	failOnError(err, "Failed to publish a message")
 }
