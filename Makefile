@@ -16,3 +16,7 @@ ez-pdeaip:
 
 clients:
 	go build ./...
+
+clean: clean-ez
+	rm -f */*.ez
+	rm -f pd-send

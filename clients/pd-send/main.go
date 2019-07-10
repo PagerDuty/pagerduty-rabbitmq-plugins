@@ -58,8 +58,8 @@ func makeBody() []byte {
 		log.Fatalf("severity not specified")
 	}
 
-	m["routing-key"] = routing_key
-	m["event-action"] = event_action
+	m["routing_key"] = routing_key
+	m["event_action"] = event_action
 	payload := make(map[string]interface{})
 	payload["summary"] = summary
 	payload["source"] = source
@@ -68,12 +68,15 @@ func makeBody() []byte {
 
 	b, err := json.Marshal(m)
 	failOnError(err, "Could not encode JSON")
+
 	return b
 }
 
 func main() {
-	url := getEnvWithDefault("PD_SEND_AMQP_URL", "amqp://guest@guest@localhost:5672")
+	url := getEnvWithDefault("PD_SEND_AMQP_URL", "amqp://guest:guest@localhost:5672")
 	exchange := getEnvWithDefault("PD_SEND_EXCHANGE", "pd-events-exchange")
+
+	body := makeBody()
 
 	conn, err := amqp.Dial(url)
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -83,11 +86,10 @@ func main() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	body := makeBody()
 	err = ch.Publish(
 		exchange, // exchange
 		"",       // routing key
-		false,    // mandatory
+		true,     // mandatory
 		false,    // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
