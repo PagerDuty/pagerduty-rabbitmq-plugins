@@ -1,13 +1,14 @@
 /*
  *  This is a basic client that can plug into Nagios.
- *
- *  TODO: configuration of broker URL
  */
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
+
+	"encoding/json"
 
 	"github.com/streadway/amqp"
 )
@@ -18,11 +19,61 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func main() {
-	var url = os.Getenv("PD_SEND_NAGIOS_AMQP_URL")
-	if len(url) == 0 {
-		url = "amqp://guest@guest@localhost:5672"
+func getEnvWithDefault(env string, default_value string) string {
+	var v = os.Getenv(env)
+	if len(v) == 0 {
+		v = default_value
 	}
+	return v
+}
+
+func makeBody() []byte {
+	m := make(map[string]interface{})
+
+	// Required stuff
+	var routing_key = flag.String("routing-key", "", "Routing key to send to")
+	var event_action = flag.String("event-action", "trigger", "Event action (default=trigger)")
+	var summary = flag.String("summary", "", "Payload summary")
+	var source = flag.String("source", "", "Payload source")
+	var severity = flag.String("severity", "", "Payload severity")
+
+	// TODO flags for optional stuff
+
+	// Process everything and check required things.
+	flag.Parse()
+
+	if len(*routing_key) == 0 {
+		log.Fatalf("routing-key not specified")
+	}
+	if len(*event_action) == 0 {
+		log.Fatalf("event-action not specified")
+	}
+	if len(*summary) == 0 {
+		log.Fatalf("summary not specified")
+	}
+	if len(*source) == 0 {
+		log.Fatalf("source not specified")
+	}
+	if len(*severity) == 0 {
+		log.Fatalf("severity not specified")
+	}
+
+	m["routing-key"] = routing_key
+	m["event-action"] = event_action
+	payload := make(map[string]interface{})
+	payload["summary"] = summary
+	payload["source"] = source
+	payload["severity"] = severity
+	m["payload"] = payload
+
+	b, err := json.Marshal(m)
+	failOnError(err, "Could not encode JSON")
+	return b
+}
+
+func main() {
+	url := getEnvWithDefault("PD_SEND_AMQP_URL", "amqp://guest@guest@localhost:5672")
+	exchange := getEnvWithDefault("PD_SEND_EXCHANGE", "pd-events-exchange")
 
 	conn, err := amqp.Dial(url)
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -32,22 +83,12 @@ func main() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
-		"hello", // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
-	body := "Hello World!"
+	body := makeBody()
 	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+		exchange, // exchange
+		"",       // routing key
+		false,    // mandatory
+		false,    // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(body),
