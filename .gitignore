@@ -1,4 +1,4 @@
 log/
 dist.zip
 *.ez
-pd-send-nagios
+/pd-send
