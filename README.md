@@ -34,6 +34,14 @@ Current list of plugins:
 
 * [pd-events-api-plugin](pd-events-api-plugin) - A queue consumer that talks to the PagerDuty
   Events API.
+  
+## Clients
+
+Some command-line clients to make interacting with the system easier are provided (or planned). The current list:
+
+* `pd-send` - send an event. This is a very simple first integration point. For options, please
+  refer to the [source code](clients/pd-send/main.go#L36). There are also two environment variables
+  you can set, again see the [source code](clients/pd-send/main.go#L86).
 
 ## Installation
 
