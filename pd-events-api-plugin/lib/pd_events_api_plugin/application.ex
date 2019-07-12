@@ -17,7 +17,7 @@ defmodule PdEventsApiPlugin.Application do
       "log_level": "#{@default_log_level}",
       "exchange": "#{@default_exchange}",
       "queue": "#{@default_queue}",
-      "parallelism": "#{@default_parallelism}"
+      "parallelism": #{@default_parallelism}
     }
     """)
 
