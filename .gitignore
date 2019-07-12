@@ -2,3 +2,6 @@ log/
 dist.zip
 *.ez
 /pd-send
+/target
+pd-events-api-plugin.json
+*.deb

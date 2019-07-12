@@ -53,6 +53,30 @@ Note that it is best to run this on the target platform; while compiled `.beam` 
 be that plugin code (indirectly) depends on applications that have native functions; in that case, the `.ez`
 file will contain platform-dependent object code.
 
+### Installation on Debian/Ubuntu
+
+Make or download the distribution file (`make debian-dist`). Then
+
+```
+sudo apt install ./pagerduty-rabbitmq-plugins_1.0.0-1_amd64.deb
+sudo rabbitmq-plugins enable pd_events_api_plugin
+```
+
+To install everything and enable the plugin.
+
+## Post-installation steps
+
+RabbitMQ ships with a default `guest/guest` user account that has wide access. At the minimum, post installation,
+change the guest password:
+
+```
+sudo rabbitmqctl change_password guest <new_password>
+```
+
+See [User Management](https://www.rabbitmq.com/rabbitmqctl.8.html#User_Management) in the RabbitMQ documentation
+for more information.
+
+
 # License
 
 Copyright 2019, PagerDuty Inc.
