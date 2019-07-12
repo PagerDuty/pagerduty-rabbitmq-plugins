@@ -18,7 +18,7 @@ ez-pdeaip:
 
 clients:
 	go get github.com/streadway/amqp
-	go build ./...
+	GOOS=linux GOARCH=amd64 go build ./...
 
 clean: clean-ez
 	rm -f */*.ez *.deb ${CLIENTS}
