@@ -3,9 +3,23 @@ defmodule PdEventsApiPlugin.Application do
   require Logger
 
   @default_app_file if Mix.env == :prod, do: "/etc/rabbitmq/pd-events-api-plugin.json", else: "config/pd-events-api-plugin.json"
+
+  @default_log_level "info"
   @default_exchange "pd-events-exchange"
   @default_queue    "pd-events"
   @default_parallelism 12
+
+  # To make sure we only need to specify the defaults once, we write the development/distribution
+  # config file on compile.
+  File.write("config/pd-events-api-plugin.json",
+    ~s"""
+    {
+      "log_level": "#{@default_log_level}",
+      "exchange": "#{@default_exchange}",
+      "queue": "#{@default_queue}",
+      "parallelism": "#{@default_parallelism}"
+    }
+    """)
 
   @doc """
   Application startup. The configuration file is hard-coded but you can override it by setting the
@@ -23,7 +37,7 @@ defmodule PdEventsApiPlugin.Application do
                  map
                end
 
-      log_level = Map.get(config, "log_level", "debug")
+      log_level = Map.get(config, "log_level", @default_log_level)
       Logger.configure(level: String.to_atom(log_level))
 
       exchange = Map.get(config, "exchange", @default_exchange)

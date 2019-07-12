@@ -1,8 +1,6 @@
 {
-  "__doc__": "This is a configuration file where you can override default values.",
-  "++doc__": "Tags below are documentation only. Remove the leading pluses for the actual keys",
-  "++log_level": "The minimum log level (default debug, can be info or error)",
-  "++exchange": "The exchange to use (default \"pd-events-exchange\")",
-  "++queue": "The queue to use (default \"pd-events\")",
-  "++parallelism": "How many parallel queues to setup (default 12)"
+  "log_level": "info",
+  "exchange": "pd-events-exchange",
+  "queue": "pd-events",
+  "parallelism": "12"
 }
