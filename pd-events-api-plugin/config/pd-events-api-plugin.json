@@ -1,6 +1,0 @@
-{
-  "log_level": "info",
-  "exchange": "pd-events-exchange",
-  "queue": "pd-events",
-  "parallelism": "12"
-}

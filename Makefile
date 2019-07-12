@@ -1,4 +1,6 @@
-.PHONY: clients
+.PHONY: clients target
+
+CLIENTS := pd-send
 
 dist: clean-ez ez-common ez-pdeaip clients
 	curl -LO https://github.com/PagerDuty/pagerduty-rabbitmq-plugins/releases/download/elixir-20.3-1.8.1/elixir-1.8.1.ez
@@ -19,5 +21,29 @@ clients:
 	go build ./...
 
 clean: clean-ez
-	rm -f */*.ez
-	rm -f pd-send
+	rm -f */*.ez *.deb ${CLIENTS}
+	rm -rf target
+
+# Tested on Ubuntu 18.04
+debian-dist: dist fpm debian-target
+	fpm -s dir -t deb \
+		--name "pagerduty-rabbitmq-plugins" \
+		--version `cat VERSION`-1 \
+	  --architecture x86_64 \
+		--depends 'rabbitmq-server >= 3.6.10' \
+    --after-install dist/debian-after-install.sh \
+    -C target .
+
+debian-target: target
+	mkdir -p target/usr/lib/rabbitmq/plugins
+	cd target/usr/lib/rabbitmq/plugins; rm *; unzip ../../../../../dist.zip
+	mkdir -p target/usr/bin
+	cp $(CLIENTS) target/usr/bin
+	mkdir -p target/etc/rabbitmq
+	cp pd-events-api-plugin/config/pd-events-api-plugin.json target/etc/rabbitmq
+
+fpm:
+	which fpm || gem install fpm
+
+target:
+	rm -rf target && mkdir target
