@@ -5,13 +5,14 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"hash/crc32"
 	"log"
 	"os"
+	"strings"
 	"strconv"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/streadway/amqp"
 )
 
@@ -33,52 +34,69 @@ func makeBody() (string, []byte) {
 	m := make(map[string]interface{})
 
 	// Required stuff
-	var routing_key = flag.String("routing-key", "", "Routing key to send to")
-	var event_action = flag.String("event-action", "trigger", "Event action (default=trigger)")
-	var summary = flag.String("summary", "", "Payload summary")
-	var source = flag.String("source", "", "Payload source")
-	var severity = flag.String("severity", "", "Payload severity")
 
-	// flags for optional stuff
-	var parallelism = flag.Int("parallelism", 0, "MUST be same as plugin parallelism setting")
-
-	// Process everything and check required things.
-	flag.Parse()
-
-	if len(*routing_key) == 0 {
-		log.Fatalf("routing-key not specified")
-	}
-	if len(*event_action) == 0 {
-		log.Fatalf("event-action not specified")
-	}
-	if len(*summary) == 0 {
-		log.Fatalf("summary not specified")
-	}
-	if len(*source) == 0 {
-		log.Fatalf("source not specified")
-	}
-	if len(*severity) == 0 {
-		log.Fatalf("severity not specified")
+	var opts struct {
+		RoutingKey string `short:"k" long:"service-key" description:"Routing key to send to" required:"true"`
+		EventAction string `short:"t" long:"event-type" description:"Event Action" default:"trigger" choice:"trigger" choice:"acknowledge" choice:"resolve"`
+		Summary string `short:"d" long:"description" description:"Payload summary" required:"true"`
+		DedupKey string `short:"i" long:"incident-key" description:"Deduplication key"`
+		Client string `short:"c" long:"client" description:"Client Name"`
+		ClientURL string `short:"u" long:"client-url" description:"Client URL"`
+		Source string `short:"s" long:"source" description:"Payload source" default:"Unknown source"`
+		Severity string `short:"p" long:"severity" description:"Payload severity" default:"critical" choice:"critical" choice:"error" choice:"warning" choice:"info"`
+		Parallelism int `short:"l" long:"parallelism" description:"MUST be same as plugin parallelism setting" default:"0"`
+		Fields []string `short:"f" long:"field" description:"Add given KEY=VALUE pair to the event details"`
 	}
 
-	m["routing_key"] = routing_key
-	m["event_action"] = event_action
+	_, err := flags.Parse(&opts)
+	if err != nil {
+	    os.Exit(1)
+	}
+
+	m["routing_key"] = opts.RoutingKey
+	m["event_action"] = opts.EventAction
+	if opts.DedupKey != "" {
+		m["dedup_key"] = opts.DedupKey
+	}
+
+	if opts.Client != "" {
+		m["client"] = opts.Client
+	}
+	if opts.ClientURL != "" {
+		m["client_url"] = opts.ClientURL
+	}
+
 	payload := make(map[string]interface{})
-	payload["summary"] = summary
-	payload["source"] = source
-	payload["severity"] = severity
+	payload["summary"] = opts.Summary
+	payload["source"] = opts.Source
+	payload["severity"] = opts.Severity
+
+	if len(opts.Fields) > 0 {
+		custom_details := make(map[string]interface{})
+		for _, field := range opts.Fields {
+			field_split := strings.SplitN(field, "=", 2)
+			if len(field_split) == 2 {
+				custom_details[field_split[0]] = field_split[1]
+			} else {
+				fmt.Println("Warning: field argument '" + field + "' is not in KEY=VALUE form, ignoring.")
+			}
+		}
+		payload["custom_details"] = custom_details
+	}
+
 	m["payload"] = payload
+
 
 	body, err := json.Marshal(m)
 	failOnError(err, "Could not encode JSON")
 
 	amqp_routing_key := ""
-	if *parallelism > 0 {
-		hash := crc32.ChecksumIEEE([]byte(*routing_key))
-		partition := (int(hash) % *parallelism) + 1
+	if opts.Parallelism > 0 {
+		hash := crc32.ChecksumIEEE([]byte(opts.RoutingKey))
+		partition := (int(hash) % opts.Parallelism) + 1
 		amqp_routing_key = strconv.Itoa(partition)
 	}
-	fmt.Println("Amqp routing key", amqp_routing_key)
+
 	return amqp_routing_key, body
 }
 
@@ -106,4 +124,9 @@ func main() {
 			Body:        body,
 		})
 	failOnError(err, "Failed to publish a message")
+	var message = "Event Processed."
+	if routing_key != "" {
+		message += " Routed to queue " + routing_key + "."
+	}
+	fmt.Println(message)
 }
