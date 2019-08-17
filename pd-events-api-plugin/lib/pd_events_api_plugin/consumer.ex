@@ -9,7 +9,7 @@ defmodule PdEventsApiPlugin.Consumer do
   require Logger
 
   defmodule State do
-    defstruct [:chan, :exchange, :queue, :handler, :routing_key]
+    defstruct [:chan, :exchange, :queue, :handler, :routing_key, :proxy]
   end
 
   @doc """
@@ -19,6 +19,7 @@ defmodule PdEventsApiPlugin.Consumer do
   * `queue` - the queue to read from
   * `message_handler` - a function that accepts a message and returns `:ok`, `:retry` or `:error`
   * `routing_key` - nil or an explicit routing key that needs to be passed on configuring the exchange binding.
+  * `proxy` - nil or a proxy url to use when sending events to PagerDuty, e.g. "https://user:pass@127.0.0.1:3188"
 
   A 'retry' will also do a 1-second sleep to throttle the client a bit.
 
@@ -26,8 +27,8 @@ defmodule PdEventsApiPlugin.Consumer do
   that indicates which bucket it falls in.
 
   """
-  def start_link([exchange, queue, message_handler, routing_key]) do
-    state = %State{exchange: exchange, queue: queue, handler: message_handler, routing_key: routing_key}
+  def start_link([exchange, queue, message_handler, routing_key, proxy]) do
+    state = %State{exchange: exchange, queue: queue, handler: message_handler, routing_key: routing_key, proxy: proxy}
     GenServer.start_link(__MODULE__, state, [])
   end
 
@@ -85,7 +86,7 @@ defmodule PdEventsApiPlugin.Consumer do
     Logger.debug("state = #{inspect state}")
     Logger.debug("consuming tag=#{tag}, redelivered=#{redelivered}, payload=#{inspect payload}")
     try do
-      case state.handler.(payload) do
+      case state.handler.(payload, state.proxy) do
         :ok ->
           Logger.debug("Message #{tag} delivered")
           Basic.ack state.chan, tag

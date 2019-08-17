@@ -34,6 +34,17 @@ debian-dist: dist fpm debian-target
     --after-install dist/debian-after-install.sh \
     -C target .
 
+# Tested on RHEL 8
+rpm-dist: dist fpm debian-target
+	fpm -s dir -t rpm \
+		--rpm-os linux \
+		--name "pagerduty-rabbitmq-plugins" \
+		--version `cat VERSION`_1 \
+		--architecture x86_64 \
+		--depends 'rabbitmq-server >= 3.6.10' \
+		--after-install dist/rpm-after-install.sh \
+		-C target .
+
 debian-target: target
 	mkdir -p target/usr/lib/rabbitmq/plugins
 	cd target/usr/lib/rabbitmq/plugins; rm *; unzip ../../../../../dist.zip
