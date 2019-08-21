@@ -17,7 +17,8 @@ defmodule PdEventsApiPlugin.Application do
       "log_level": "#{@default_log_level}",
       "exchange": "#{@default_exchange}",
       "queue": "#{@default_queue}",
-      "parallelism": #{@default_parallelism}
+      "parallelism": #{@default_parallelism},
+      "proxy_url": ""
     }
     """)
 
@@ -43,16 +44,17 @@ defmodule PdEventsApiPlugin.Application do
       exchange = Map.get(config, "exchange", @default_exchange)
       queue = Map.get(config, "queue", @default_queue)
       parallelism = Map.get(config, "parallelism", @default_parallelism)
-      handler = &PdEventsApiPlugin.Handler.handle_message/1
+      proxy = Map.get(config, "proxy_url")
+      handler = &PdEventsApiPlugin.Handler.handle_message/2
 
       # We always start one queue for blank routing key
-      first_worker = Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, ""]}, id: make_id("default"))
+      first_worker = Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, "", proxy]}, id: make_id("default"))
       # ..and a bunch for with routing keys.
       parallel_workers = if parallelism > 0 do
         1..parallelism
         |> Enum.map(fn i ->
           queue = "#{queue}-#{i}"
-          Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, "#{i}"]}, id: make_id(i))
+          Supervisor.child_spec({PdEventsApiPlugin.Consumer, [exchange, queue, handler, "#{i}", proxy]}, id: make_id(i))
         end)
       else
         []
