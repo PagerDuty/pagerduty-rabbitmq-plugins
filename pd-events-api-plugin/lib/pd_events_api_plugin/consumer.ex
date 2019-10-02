@@ -65,6 +65,11 @@ defmodule PdEventsApiPlugin.Consumer do
     {:noreply, state}
   end
 
+  def handle_info({:ssl_closed, _gen_tcp}, state) do
+    Logger.debug("SSL connection closed")
+    {:noreply, state}
+  end
+
   defp setup_queue(state) do
     error_queue = "#{state.exchange}-error"
     {:ok, _} = Queue.declare(state.chan, error_queue, durable: true)
