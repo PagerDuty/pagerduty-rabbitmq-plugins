@@ -92,7 +92,7 @@ func makeBody() (string, []byte) {
 
 	amqp_routing_key := ""
 	if opts.Parallelism > 0 {
-		hash := crc32.ChecksumIEEE([]byte(opts.RoutingKey))
+		hash := crc32.ChecksumIEEE([]byte(opts.RoutingKey + opts.DedupKey))
 		partition := (int(hash) % opts.Parallelism) + 1
 		amqp_routing_key = strconv.Itoa(partition)
 	}
